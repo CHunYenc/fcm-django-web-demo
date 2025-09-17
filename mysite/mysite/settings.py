@@ -158,5 +158,6 @@ if os.path.exists(f):
     sys.modules[module_name] = module
     exec(open(f, 'rb').read())
 
-cred = credentials.Certificate(os.path.join(PROJECT_APP, '../credentials.json'))
-firebase_admin.initialize_app(cred)
+if not firebase_admin._apps:
+    cred = credentials.Certificate(os.path.join(BASE_DIR, 'credentials.json'))
+    firebase_admin.initialize_app(cred)
