@@ -181,7 +181,7 @@ limitations under the License.
     if (!isTokenSentToServer()) {
       console.log('Sending token to server...');
       // TODO(developer): Send the current token to your server.
-      fetch('http://localhost:8000/devices/', {
+      fetch('https://backend-production-507c.up.railway.app/devices/', {
         method: "POST",
         headers: {
             'Content-Type': 'application/json'
