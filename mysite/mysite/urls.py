@@ -25,11 +25,12 @@ router.register(r'devices', FCMDeviceViewSet)
 
 urlpatterns = [
     re_path(r'^admin/', admin.site.urls),
-    re_path(r'^docs/', include_docs_urls(title='FCM django web demo')),
-    path(
-        "openapi",
-        get_schema_view(title="FCM Django", description="FCM Django"),
-        name="openapi-schema",
-    ),
+    # re_path(r'^docs/', include_docs_urls(title='FCM django web demo')),
+    # path(
+    #     "openapi",
+    #     get_schema_view(title="FCM Django", description="FCM Django"),
+    #     name="openapi-schema",
+    # ),
     re_path(r'^', include(router.urls)),
+    path('webpush/', include('webpush.urls')),
 ]

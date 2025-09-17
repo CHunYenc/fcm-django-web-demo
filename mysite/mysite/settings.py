@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'fcm_django',
     'corsheaders',
     'sslserver',
+    'webpush',
 ]
 
 MIDDLEWARE = [
