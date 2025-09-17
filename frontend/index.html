@@ -82,7 +82,7 @@ limitations under the License.
 <!-- START INITIALIZATION CODE -->
 <script src="https://www.gstatic.com/firebasejs/7.0.0/firebase.js"></script>
 <script>
-  fetch('/webpush/firebase-config')
+  fetch('https://backend-production-507c.up.railway.app/webpush/firebase-config')
     .then(response => response.json())
     .then(config => {
       firebase.initializeApp(config);
