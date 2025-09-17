@@ -81,7 +81,13 @@ limitations under the License.
 -->
 <!-- START INITIALIZATION CODE -->
 <script src="https://www.gstatic.com/firebasejs/7.0.0/firebase.js"></script>
-<script src="/webpush/firebase-config.js"></script>
+<script>
+  fetch('/webpush/firebase-config')
+    .then(response => response.json())
+    .then(config => {
+      firebase.initializeApp(config);
+    });
+</script>
 <!-- END INITIALIZATION CODE -->
 <!-- ******************************************************** -->
 <script>

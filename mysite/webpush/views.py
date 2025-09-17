@@ -1,5 +1,5 @@
 import os
-from django.shortcuts import render
+from django.http import JsonResponse
 
 def firebase_config_script(request):
     """
@@ -16,9 +16,13 @@ def firebase_config_script(request):
         'appId': os.environ.get('FIREBASE_APP_ID'),
     }
     
-    return render(
-        request,
-        'webpush/firebase_config.js',
-        {'firebase_config': firebase_config},
-        content_type='application/javascript'
-    )
+    return JsonResponse(firebase_config)
+
+# env variables
+# FIREBASE_API_KEY=?
+# FIREBASE_AUTH_DOMAIN=?
+# FIREBASE_DATABASE_URL=?
+# FIREBASE_PROJECT_ID=?
+# FIREBASE_STORAGE_BUCKET=?
+# FIREBASE_MESSAGING_SENDER_ID=?
+# FIREBASE_APP_ID=?
