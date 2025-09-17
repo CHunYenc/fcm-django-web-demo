@@ -100,19 +100,26 @@ limitations under the License.
     <!-- START INITIALIZATION CODE -->
     <script src="https://www.gstatic.com/firebasejs/7.0.0/firebase.js"></script>
     <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/firebase-messaging-sw.js')
+          .then(function(registration) {
+            console.log('Service Worker registered with scope:', registration.scope);
+          }).catch(function(err) {
+            console.log('Service worker registration failed:', err);
+          });
+      }
+
+      let messaging;
+      const tokenDivId = "token_div";
+      const permissionDivId = "permission_div";
+
       fetch(
         "https://backend-production-507c.up.railway.app/webpush/firebase-config"
       )
         .then((response) => response.json())
         .then((config) => {
           firebase.initializeApp(config);
-
-          // All messaging logic goes here.
-          const messaging = firebase.messaging();
-
-          // IDs of divs that display Instance ID token UI or request permission UI.
-          const tokenDivId = "token_div";
-          const permissionDivId = "permission_div";
+          messaging = firebase.messaging();
 
           // Callback fired if Instance ID token is updated.
           messaging.onTokenRefresh(function () {
@@ -136,142 +143,144 @@ limitations under the License.
             appendMessage(payload);
           });
 
-          function resetUI() {
-            clearMessages();
-            showToken("loading...");
-            messaging
-              .getToken()
-              .then(function (currentToken) {
-                if (currentToken) {
-                  sendTokenToServer(currentToken);
-                  updateUIForPushEnabled(currentToken);
-                } else {
-                  console.log(
-                    "No Instance ID token available. Request permission to generate one."
-                  );
-                  updateUIForPushPermissionRequired();
-                  setTokenSentToServer(false);
-                }
-              })
-              .catch(function (err) {
-                console.log("An error occurred while retrieving token. ", err);
-                showToken("Error retrieving Instance ID token. ", err);
-                setTokenSentToServer(false);
-              });
-          }
+          // Initial call to set up the UI.
+          resetUI();
+        });
 
-          function showToken(currentToken) {
-            var tokenElement = document.querySelector("#token");
-            tokenElement.textContent = currentToken;
-          }
-
-          function sendTokenToServer(currentToken) {
-            if (!isTokenSentToServer()) {
-              console.log("Sending token to server...");
-              fetch("https://backend-production-507c.up.railway.app/devices/", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  registration_id: currentToken,
-                  type: "web",
-                }),
-                credentials: "include",
-              }).then(function (response) {
-                console.log(response);
-              });
-              setTokenSentToServer(true);
+      function resetUI() {
+        clearMessages();
+        showToken("loading...");
+        messaging
+          .getToken()
+          .then(function (currentToken) {
+            if (currentToken) {
+              sendTokenToServer(currentToken);
+              updateUIForPushEnabled(currentToken);
             } else {
               console.log(
-                "Token already sent to server so won't send it again " +
-                  "unless it changes"
+                "No Instance ID token available. Request permission to generate one."
               );
+              updateUIForPushPermissionRequired();
+              setTokenSentToServer(false);
             }
-          }
+          })
+          .catch(function (err) {
+            console.log("An error occurred while retrieving token. ", err);
+            showToken("Error retrieving Instance ID token. ", err);
+            setTokenSentToServer(false);
+          });
+      }
 
-          function isTokenSentToServer() {
-            return window.localStorage.getItem("sentToServer") == 1;
-          }
+      function showToken(currentToken) {
+        var tokenElement = document.querySelector("#token");
+        tokenElement.textContent = currentToken;
+      }
 
-          function setTokenSentToServer(sent) {
-            window.localStorage.setItem("sentToServer", sent ? 1 : 0);
-          }
+      function sendTokenToServer(currentToken) {
+        if (!isTokenSentToServer()) {
+          console.log("Sending token to server...");
+          fetch("https://backend-production-507c.up.railway.app/devices/", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              registration_id: currentToken,
+              type: "web",
+            }),
+            credentials: "include",
+          }).then(function (response) {
+            console.log(response);
+          });
+          setTokenSentToServer(true);
+        } else {
+          console.log(
+            "Token already sent to server so won't send it again " +
+              "unless it changes"
+          );
+        }
+      }
 
-          function showHideDiv(divId, show) {
-            const div = document.querySelector("#" + divId);
-            if (show) {
-              div.style = "display: visible";
-            } else {
-              div.style = "display: none";
-            }
-          }
+      function isTokenSentToServer() {
+        return window.localStorage.getItem("sentToServer") == 1;
+      }
 
-          function requestPermission() {
-            console.log("Requesting permission...");
+      function setTokenSentToServer(sent) {
+        window.localStorage.setItem("sentToServer", sent ? 1 : 0);
+      }
+
+      function showHideDiv(divId, show) {
+        const div = document.querySelector("#" + divId);
+        if (show) {
+          div.style = "display: visible";
+        } else {
+          div.style = "display: none";
+        }
+      }
+
+      function requestPermission() {
+        console.log("Requesting permission...");
+        messaging
+          .requestPermission()
+          .then(function () {
+            console.log("Notification permission granted.");
+            resetUI();
+          })
+          .catch(function (err) {
+            console.log("Unable to get permission to notify.", err);
+            alert("您已封鎖通知權限。如果您想收到通知，請在瀏覽器設定中手動啟用權限。");
+          });
+      }
+
+      function deleteToken() {
+        messaging
+          .getToken()
+          .then(function (currentToken) {
             messaging
-              .requestPermission()
+              .deleteToken(currentToken)
               .then(function () {
-                console.log("Notification permission granted.");
+                console.log("Token deleted.");
+                setTokenSentToServer(false);
                 resetUI();
               })
               .catch(function (err) {
-                console.log("Unable to get permission to notify.", err);
+                console.log("Unable to delete token. ", err);
               });
-          }
+          })
+          .catch(function (err) {
+            console.log("Error retrieving Instance ID token. ", err);
+            showToken("Error retrieving Instance ID token. ", err);
+          });
+      }
 
-          function deleteToken() {
-            messaging
-              .getToken()
-              .then(function (currentToken) {
-                messaging
-                  .deleteToken(currentToken)
-                  .then(function () {
-                    console.log("Token deleted.");
-                    setTokenSentToServer(false);
-                    resetUI();
-                  })
-                  .catch(function (err) {
-                    console.log("Unable to delete token. ", err);
-                  });
-              })
-              .catch(function (err) {
-                console.log("Error retrieving Instance ID token. ", err);
-                showToken("Error retrieving Instance ID token. ", err);
-              });
-          }
+      function appendMessage(payload) {
+        const messagesElement = document.querySelector("#messages");
+        const dataHeaderELement = document.createElement("h5");
+        const dataElement = document.createElement("pre");
+        dataElement.style = "overflow-x:hidden;";
+        dataHeaderELement.textContent = "Received message:";
+        dataElement.textContent = JSON.stringify(payload, null, 2);
+        messagesElement.appendChild(dataHeaderELement);
+        messagesElement.appendChild(dataElement);
+      }
 
-          function appendMessage(payload) {
-            const messagesElement = document.querySelector("#messages");
-            const dataHeaderELement = document.createElement("h5");
-            const dataElement = document.createElement("pre");
-            dataElement.style = "overflow-x:hidden;";
-            dataHeaderELement.textContent = "Received message:";
-            dataElement.textContent = JSON.stringify(payload, null, 2);
-            messagesElement.appendChild(dataHeaderELement);
-            messagesElement.appendChild(dataElement);
-          }
+      function clearMessages() {
+        const messagesElement = document.querySelector("#messages");
+        while (messagesElement.hasChildNodes()) {
+          messagesElement.removeChild(messagesElement.lastChild);
+        }
+      }
 
-          function clearMessages() {
-            const messagesElement = document.querySelector("#messages");
-            while (messagesElement.hasChildNodes()) {
-              messagesElement.removeChild(messagesElement.lastChild);
-            }
-          }
+      function updateUIForPushEnabled(currentToken) {
+        showHideDiv(tokenDivId, true);
+        showHideDiv(permissionDivId, false);
+        showToken(currentToken);
+      }
 
-          function updateUIForPushEnabled(currentToken) {
-            showHideDiv(tokenDivId, true);
-            showHideDiv(permissionDivId, false);
-            showToken(currentToken);
-          }
-
-          function updateUIForPushPermissionRequired() {
-            showHideDiv(tokenDivId, false);
-            showHideDiv(permissionDivId, true);
-          }
-
-          resetUI();
-        });
+      function updateUIForPushPermissionRequired() {
+        showHideDiv(tokenDivId, false);
+        showHideDiv(permissionDivId, true);
+      }
     </script>
   </body>
 </html>
